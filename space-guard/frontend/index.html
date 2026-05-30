@@ -664,7 +664,7 @@
     lista.innerHTML = '<div class="skeleton" style="height:64px;margin-bottom:8px;"></div>'.repeat(4);
 
     try {
-      const r = await fetch(`${API_BASE}/focos`, { signal: AbortSignal.timeout(12000) });
+      const r = await fetch(`${API_BASE}/focos`, { signal: AbortSignal.timeout(30000) });
       const d = await r.json();
 
       document.getElementById("metric-total").textContent = d.stats?.total ?? "--";

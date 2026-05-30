@@ -271,16 +271,41 @@ def status():
 @app.route("/focos", methods=["GET"])
 def focos():
     raw = get_focos_inpe()
-    enriquecidos = []
+    if not raw:
+        return jsonify({"focos": [], "stats": {"total": 0, "alto": 0, "medio": 0, "baixo": 0, "fonte": "N/A"}})
+
+    now = datetime.utcnow()
+
+    # Batch: monta DataFrame com todos os focos de uma vez
+    biome_list = []
     for f in raw:
-        classif = classificar_foco(f)
+        b = f.get("biome", "Cerrado")
+        biome_list.append(b if b in le.classes_ else "Cerrado")
+
+    df_batch = pd.DataFrame([{
+        "frp":        float(f.get("frp", 50.0)),
+        "brightness": float(f.get("brightness", 340.0)),
+        "confidence": float(f.get("confidence", 70)),
+        "biome_enc":  int(le.transform([b])[0]),
+        "month":      int(f.get("month", now.month)),
+        "hour":       int(f.get("hour", now.hour)),
+    } for f, b in zip(raw, biome_list)])
+
+    preds  = clf.predict(df_batch[FEATURES])
+    probas = clf.predict_proba(df_batch[FEATURES])
+    classes = clf.classes_
+
+    enriquecidos = []
+    contagem = {"alto": 0, "medio": 0, "baixo": 0}
+    for f, pred, proba in zip(raw, preds, probas):
+        risk_score = round(float(max(proba)), 4)
         item = dict(f)
-        item.update(classif)
+        item["risk_label"]   = pred
+        item["risk_score"]   = risk_score
+        item["probabilities"] = {c: round(float(p), 4) for c, p in zip(classes, proba)}
         enriquecidos.append(item)
 
-    contagem = {"alto": 0, "medio": 0, "baixo": 0}
-    for item in enriquecidos:
-        rl = item.get("risk_label", "Baixo").lower()
+        rl = pred.lower()
         if rl == "alto":
             contagem["alto"] += 1
         elif "dio" in rl:

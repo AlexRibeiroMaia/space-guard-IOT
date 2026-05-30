@@ -6,6 +6,12 @@ Sistema de monitoramento de queimadas com dados orbitais do INPE, classificaçã
 
 ---
 
+## 📽️ Apresentação em Vídeo
+
+[![Space Guard — Apresentação](https://img.youtube.com/vi/zUxHMpFQ_FQ/maxresdefault.jpg)](https://youtu.be/zUxHMpFQ_FQ)
+
+---
+
 ## Visão Geral
 
 O Space Guard consome focos de incêndio em tempo real do INPE, classifica cada foco em **Alto / Médio / Baixo** risco usando um modelo RandomForest treinado com dados do INPE Queimadas, e oferece um assistente de IA (Claude Sonnet) para análise contextual dos dados.
