@@ -1,0 +1,28 @@
+{
+  "features": [
+    "frp",
+    "brightness",
+    "confidence",
+    "biome_enc",
+    "month",
+    "hour"
+  ],
+  "classes": [
+    "Alto",
+    "Baixo",
+    "Médio"
+  ],
+  "accuracy": 0.929,
+  "cv_accuracy": 0.927,
+  "biome_classes": [
+    "Amazônia",
+    "Caatinga",
+    "Cerrado",
+    "Mata Atlântica",
+    "Pampa",
+    "Pantanal"
+  ],
+  "n_estimators": 150,
+  "algorithm": "RandomForestClassifier",
+  "trained_on": "focos_inpe_treino.csv"
+}

@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Guard — Monitoramento de Queimadas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #05080f;
+      --surface:   #0d1424;
+      --surface2:  #111d33;
+      --border:    #1e2d4a;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --alto:      #ef4444;
+      --alto-bg:   #3b0f0f;
+      --medio:     #f59e0b;
+      --medio-bg:  #3b2a06;
+      --baixo:     #10b981;
+      --baixo-bg:  #063b24;
+      --accent:    #3b82f6;
+      --accent2:   #6366f1;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Space Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: linear-gradient(135deg, #070e1f 0%, #0d1a35 60%, #091228 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px rgba(59,130,246,0.35);
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.05em;
+    }
+
+    .logo-text p {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      transition: all 0.3s;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 2s infinite;
+    }
+
+    .status-pill.online .status-dot  { background: var(--baixo); box-shadow: 0 0 8px var(--baixo); }
+    .status-pill.offline .status-dot { background: var(--alto); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ---- LAYOUT ---- */
+    main { max-width: 1400px; margin: 0 auto; padding: 28px 24px 60px; }
+
+    section { margin-bottom: 32px; }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ---- CARDS DE MÉTRICAS ---- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .metrics-grid { grid-template-columns: 1fr; } }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .metric-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+    .metric-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--card-accent, var(--accent));
+    }
+
+    .metric-label {
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+
+    .metric-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 36px; font-weight: 800;
+      color: var(--card-color, var(--text));
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric-sub { font-size: 10px; color: var(--muted); }
+
+    /* ---- GRADE PRINCIPAL ---- */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+    }
+    @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* ---- PAINEL DE FOCOS ---- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .card-header h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 700;
+    }
+
+    .card-body { padding: 16px 20px; }
+
+    .refresh-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px;
+      padding: 5px 10px; cursor: pointer; font-family: inherit;
+      font-size: 10px; letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Lista de focos */
+    #focos-lista { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; }
+    #focos-lista::-webkit-scrollbar { width: 4px; }
+    #focos-lista::-webkit-scrollbar-track { background: var(--surface2); }
+    #focos-lista::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .foco-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      transition: border-color 0.2s;
+    }
+    .foco-item:hover { border-color: var(--accent); }
+
+    .foco-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .foco-info h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .foco-info p { font-size: 10px; color: var(--muted); }
+
+    .risk-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-alto  { background: var(--alto-bg);  color: var(--alto);  border: 1px solid var(--alto); }
+    .badge-medio { background: var(--medio-bg); color: var(--medio); border: 1px solid var(--medio); }
+    .badge-baixo { background: var(--baixo-bg); color: var(--baixo); border: 1px solid var(--baixo); }
+
+    /* ---- SIDEBAR ---- */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+    .info-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .info-item:last-child { border-bottom: none; }
+    .info-label { color: var(--muted); }
+    .info-value { font-weight: 700; color: var(--text); }
+
+    /* ---- SIMULAÇÃO MOBILE ---- */
+    .sim-card { text-align: center; padding: 24px 20px; }
+
+    .sim-icon { font-size: 48px; margin-bottom: 12px; }
+
+    .sim-status {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px; font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .sim-desc { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+
+    .sim-btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s;
+      letter-spacing: 0.04em;
+    }
+
+    .sim-btn.danger  { background: var(--alto);  color: #fff; }
+    .sim-btn.safe    { background: var(--baixo); color: #fff; }
+    .sim-btn:hover   { opacity: 0.85; transform: scale(1.03); }
+
+    /* ---- CHAT ---- */
+    .chat-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: 360px;
+      overflow-y: auto;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      max-width: 85%;
+    }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .msg.user .msg-avatar   { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+    .msg.ai   .msg-avatar   { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+
+    .msg-bubble {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .msg.user .msg-bubble { background: #1e3a6e; border-color: #2d5ea3; }
+
+    .msg-time { font-size: 9px; color: var(--muted); margin-top: 4px; }
+
+    .typing-indicator {
+      display: flex; gap: 4px; align-items: center; padding: 4px 2px;
+    }
+    .dot-typing {
+      width: 6px; height: 6px;
+      border-radius: 50%; background: var(--muted);
+      animation: bounce 1.2s infinite;
+    }
+    .dot-typing:nth-child(2) { animation-delay: 0.2s; }
+    .dot-typing:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+
+    .chat-chips {
+      padding: 0 16px 12px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-family: inherit;
+      font-size: 10px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    .chat-input-row {
+      display: flex; gap: 8px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+      resize: none;
+      transition: border-color 0.2s;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input::placeholder { color: var(--muted); }
+
+    .send-btn {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      border: none; border-radius: 8px;
+      padding: 10px 18px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+    }
+    .send-btn:hover { opacity: 0.85; transform: scale(1.03); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ---- LOADING ---- */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      height: 14px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ---- ALERT BANNER ---- */
+    #alert-banner {
+      display: none;
+      background: linear-gradient(90deg, #3b0f0f, #4a1515);
+      border: 1px solid var(--alto);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    #alert-banner.visible { display: flex; }
+    #alert-banner-icon { font-size: 22px; }
+
+    /* ---- FOOTER ---- */
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-left">
+    <div class="logo-icon">🛰️</div>
+    <div class="logo-text">
+      <h1>SPACE GUARD</h1>
+      <p>Prevenção de desastres com dados orbitais do INPE</p>
+    </div>
+  </div>
+  <div class="status-pill" id="status-pill">
+    <div class="status-dot"></div>
+    <span id="status-text">Verificando...</span>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- Alert Banner -->
+  <div id="alert-banner">
+    <span id="alert-banner-icon">🔴</span>
+    <span id="alert-banner-msg">Alerta ativo</span>
+  </div>
+
+  <!-- SEÇÃO 1: MÉTRICAS -->
+  <section>
+    <div class="section-title">Métricas em Tempo Real</div>
+    <div class="metrics-grid">
+      <div class="metric-card" style="--card-accent: var(--accent); --card-color: var(--accent)">
+        <div class="metric-label">Focos Ativos</div>
+        <div class="metric-value" id="metric-total">--</div>
+        <div class="metric-sub">detectados pelo INPE</div>
+      </div>
+      <div class="metric-card" style="--card-accent: var(--alto); --card-color: var(--alto)">
+        <div class="metric-label">Risco Alto</div>
+        <div class="metric-value" id="metric-alto">--</div>
+        <div class="metric-sub">requerem atenção imediata</div>
+      </div>
+      <div class="metric-card" style="--card-accent: var(--medio); --card-color: var(--medio)">
+        <div class="metric-label">Risco Médio</div>
+        <div class="metric-value" id="metric-medio">--</div>
+        <div class="metric-sub">monitoramento ativo</div>
+      </div>
+      <div class="metric-card" style="--card-accent: var(--baixo); --card-color: var(--baixo)">
+        <div class="metric-label">Precisão do Modelo ML</div>
+        <div class="metric-value" id="metric-acc">--</div>
+        <div class="metric-sub">RandomForest — INPE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEÇÃO 2: GRADE PRINCIPAL -->
+  <section>
+    <div class="section-title">Monitoramento de Focos</div>
+    <div class="main-grid">
+
+      <!-- COLUNA PRINCIPAL: Lista de focos -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🔥 Focos Classificados pelo Modelo ML</h3>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="fonte-badge" style="font-size:10px;"></span>
+            <button class="refresh-btn" onclick="carregarFocos()">↻ Atualizar</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="focos-lista">
+            <div class="skeleton" style="height:60px; margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:60px; margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:60px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUNA LATERAL: Info modelo + Simulação -->
+      <div class="sidebar">
+
+        <!-- Card Modelo ML -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🤖 Modelo de ML</h3>
+          </div>
+          <div class="card-body">
+            <div class="info-item">
+              <span class="info-label">Algoritmo</span>
+              <span class="info-value" id="ml-algo">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Acurácia</span>
+              <span class="info-value" id="ml-acc">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">CV Acurácia</span>
+              <span class="info-value" id="ml-cv">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Estimadores</span>
+              <span class="info-value">150 árvores</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Features</span>
+              <span class="info-value" style="font-size:9px; text-align:right; max-width:180px;" id="ml-features">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card Simulação Mobile -->
+        <div class="card sim-card" id="sim-card">
+          <div class="sim-icon" id="sim-icon">📡</div>
+          <div class="sim-status" id="sim-status">Simulação de Campo</div>
+          <div class="sim-desc" id="sim-desc">Simule um dispositivo móvel próximo a um foco de incêndio detectado pelo INPE.</div>
+          <button class="sim-btn danger" id="sim-btn" onclick="toggleSimulacao()">
+            Entrar na Zona de Risco
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- SEÇÃO 3: CHAT IA -->
+  <section>
+    <div class="section-title">Assistente IA — Análise dos Dados INPE</div>
+    <div class="chat-wrapper">
+
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg ai">
+          <div class="msg-avatar">🛰️</div>
+          <div>
+            <div class="msg-bubble">
+              Olá! Sou o assistente de IA do <strong>Space Guard</strong>. Tenho acesso aos dados em tempo real do INPE e ao modelo de Machine Learning de classificação de risco.<br><br>
+              Posso ajudar com análise de focos ativos, biomas em alerta, tendências sazonais e recomendações de ação. O que deseja saber?
+            </div>
+            <div class="msg-time" id="chat-init-time"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-chips">
+        <button class="chip" onclick="sendChip(this)">Quais biomas têm mais risco hoje?</button>
+        <button class="chip" onclick="sendChip(this)">Explique os focos de risco alto</button>
+        <button class="chip" onclick="sendChip(this)">Qual a tendência para os próximos dias?</button>
+        <button class="chip" onclick="sendChip(this)">Que ações tomar em caso de risco alto?</button>
+      </div>
+
+      <div class="chat-input-row">
+        <textarea
+          id="chat-input"
+          class="chat-input"
+          rows="1"
+          placeholder="Pergunte sobre os focos, biomas, riscos..."
+          onkeydown="handleChatKey(event)"
+        ></textarea>
+        <button class="send-btn" id="send-btn" onclick="enviarMensagem()">Enviar</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Space Guard &nbsp;|&nbsp; Dados orbitais INPE Queimadas &nbsp;|&nbsp; Modelo RandomForest &nbsp;|&nbsp; IA Claude &nbsp;|&nbsp; FIAP Global Solution 2024
+</footer>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+  const USE_API  = true;
+
+  let simAtivo = false;
+
+  // ─── Inicialização ─────────────────────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("chat-init-time").textContent = agora();
+    carregarStatus();
+    carregarFocos();
+    setInterval(carregarFocos, 120_000);
+  });
+
+  function agora() {
+    return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // ─── Status da API ─────────────────────────────────────────────────────────
+  async function carregarStatus() {
+    const pill = document.getElementById("status-pill");
+    const txt  = document.getElementById("status-text");
+    try {
+      const r = await fetch(`${API_BASE}/status`, { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      pill.className = "status-pill online";
+      txt.textContent = "API Online";
+      document.getElementById("metric-acc").textContent = d.accuracy
+        ? (d.accuracy * 100).toFixed(1) + "%"
+        : "--";
+      document.getElementById("ml-algo").textContent  = d.algorithm || "--";
+      document.getElementById("ml-acc").textContent   = d.accuracy ? (d.accuracy * 100).toFixed(1) + "%" : "--";
+      document.getElementById("ml-cv").textContent    = d.cv_accuracy ? (d.cv_accuracy * 100).toFixed(1) + "%" : "--";
+      document.getElementById("ml-features").textContent = d.features ? d.features.join(", ") : "--";
+    } catch {
+      pill.className = "status-pill offline";
+      txt.textContent = "API Offline";
+    }
+  }
+
+  // ─── Focos INPE ─────────────────────────────────────────────────────────────
+  async function carregarFocos() {
+    const lista = document.getElementById("focos-lista");
+    lista.innerHTML = '<div class="skeleton" style="height:64px;margin-bottom:8px;"></div>'.repeat(4);
+
+    try {
+      const r = await fetch(`${API_BASE}/focos`, { signal: AbortSignal.timeout(12000) });
+      const d = await r.json();
+
+      document.getElementById("metric-total").textContent = d.stats?.total ?? "--";
+      document.getElementById("metric-alto").textContent  = d.stats?.alto  ?? "--";
+      document.getElementById("metric-medio").textContent = d.stats?.medio ?? "--";
+
+      const fonte = d.stats?.fonte || "";
+      const fonteEl = document.getElementById("fonte-badge");
+      if (fonteEl) {
+        fonteEl.textContent = fonte === "SIMULADO" ? "⚠️ Dados Simulados" : "✅ INPE Tempo Real";
+        fonteEl.style.color = fonte === "SIMULADO" ? "var(--medio)" : "var(--baixo)";
+      }
+
+      renderizarFocos(d.focos || []);
+    } catch {
+      lista.innerHTML = `<div style="color:var(--muted);text-align:center;padding:32px;">
+        API indisponível — inicie com: <code>python api/api.py</code>
+      </div>`;
+    }
+  }
+
+  function biomeIcon(biome) {
+    const m = { "Amazônia": "🌳", "Cerrado": "🌾", "Caatinga": "🌵",
+                "Mata Atlântica": "🌿", "Pantanal": "🦜", "Pampa": "🌱" };
+    return m[biome] || "🔥";
+  }
+
+  function badgeClass(label) {
+    if (!label) return "badge-baixo";
+    const l = label.toLowerCase();
+    if (l === "alto") return "badge-alto";
+    if (l.includes("dio") || l === "medio" || l === "médio") return "badge-medio";
+    return "badge-baixo";
+  }
+
+  function iconBg(label) {
+    if (!label) return "#063b24";
+    const l = label.toLowerCase();
+    if (l === "alto") return "rgba(239,68,68,0.15)";
+    if (l.includes("dio")) return "rgba(245,158,11,0.15)";
+    return "rgba(16,185,129,0.15)";
+  }
+
+  function renderizarFocos(focos) {
+    const lista = document.getElementById("focos-lista");
+    if (!focos.length) {
+      lista.innerHTML = '<p style="color:var(--muted);text-align:center;padding:24px;">Nenhum foco disponível.</p>';
+      return;
+    }
+    lista.innerHTML = focos.map(f => {
+      const bClass = badgeClass(f.risk_label);
+      const icon   = biomeIcon(f.biome);
+      const bg     = iconBg(f.risk_label);
+      const score  = f.risk_score != null ? (f.risk_score * 100).toFixed(0) + "%" : "";
+      return `
+        <div class="foco-item">
+          <div class="foco-icon" style="background:${bg}">${icon}</div>
+          <div class="foco-info">
+            <h4>${f.biome || "Desconhecido"} — ${f.state || "???"}</h4>
+            <p>FRP: ${Number(f.frp || 0).toFixed(1)} MW &nbsp;|&nbsp; Brightness: ${Number(f.brightness || 0).toFixed(1)} K &nbsp;|&nbsp; ${f.satellite || "---"}</p>
+            <p style="margin-top:2px;">${f.datahora ? f.datahora.replace("T"," ").slice(0,16) : ""} ${score ? "· Confiança: " + score : ""}</p>
+          </div>
+          <div>
+            <span class="risk-badge ${bClass}">${f.risk_label || "Baixo"}</span>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  // ─── Simulação de Campo ────────────────────────────────────────────────────
+  function toggleSimulacao() {
+    simAtivo = !simAtivo;
+    const btn     = document.getElementById("sim-btn");
+    const icon    = document.getElementById("sim-icon");
+    const status  = document.getElementById("sim-status");
+    const desc    = document.getElementById("sim-desc");
+    const banner  = document.getElementById("alert-banner");
+    const bMsg    = document.getElementById("alert-banner-msg");
+
+    if (simAtivo) {
+      btn.className  = "sim-btn safe";
+      btn.textContent = "Sair da Zona de Risco";
+      icon.textContent = "🚨";
+      status.textContent = "ALERTA: Zona de Risco Ativo";
+      desc.textContent = "Dispositivo detectado dentro da área de influência de foco com risco ALTO. Protocolo de emergência ativado.";
+      status.style.color = "var(--alto)";
+
+      banner.classList.add("visible");
+      bMsg.textContent = "⚠️ Dispositivo próximo a foco de risco ALTO — Evacue a área imediatamente e contate a Defesa Civil.";
+
+      adicionarMensagemChat("ai",
+        "🚨 **ALERTA DE CAMPO ATIVADO**\n\nO dispositivo entrou na zona de influência de um foco com risco ALTO detectado pelo INPE.\n\n" +
+        "**Ações imediatas recomendadas:**\n" +
+        "• Evacuar a área no sentido contrário ao vento\n" +
+        "• Contatar Defesa Civil: 199\n" +
+        "• Corpo de Bombeiros: 193\n" +
+        "• Não retorne à área sem liberação oficial\n\n" +
+        "Monitorando posição continuamente..."
+      );
+    } else {
+      btn.className  = "sim-btn danger";
+      btn.textContent = "Entrar na Zona de Risco";
+      icon.textContent = "📡";
+      status.textContent = "Simulação de Campo";
+      desc.textContent = "Simule um dispositivo móvel próximo a um foco de incêndio detectado pelo INPE.";
+      status.style.color = "";
+
+      banner.classList.remove("visible");
+
+      adicionarMensagemChat("ai",
+        "✅ **Área Segura Confirmada**\n\nO dispositivo saiu da zona de influência do foco. Situação normalizada.\n\n" +
+        "Continuando monitoramento preventivo dos dados INPE. Atualize os focos para verificar novas ocorrências."
+      );
+    }
+  }
+
+  // ─── Chat ──────────────────────────────────────────────────────────────────
+  function handleChatKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensagem();
+    }
+  }
+
+  function sendChip(btn) {
+    document.getElementById("chat-input").value = btn.textContent;
+    enviarMensagem();
+  }
+
+  async function enviarMensagem() {
+    const input = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("send-btn");
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = "";
+    sendBtn.disabled = true;
+
+    adicionarMensagemChat("user", msg);
+    const typingId = adicionarTyping();
+
+    try {
+      const r = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const d = await r.json();
+      removerTyping(typingId);
+      adicionarMensagemChat("ai", d.resposta || d.error || "Sem resposta.");
+    } catch (e) {
+      removerTyping(typingId);
+      adicionarMensagemChat("ai",
+        "⚠️ Não foi possível conectar à API. Verifique se a API está rodando em localhost:5000 e se a chave ANTHROPIC_API_KEY está configurada."
+      );
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  function adicionarMensagemChat(tipo, texto) {
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = `msg ${tipo}`;
+
+    const avatar = tipo === "user" ? "👤" : "🛰️";
+    const bubble = texto.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    div.innerHTML = `
+      <div class="msg-avatar">${avatar}</div>
+      <div>
+        <div class="msg-bubble">${bubble}</div>
+        <div class="msg-time">${agora()}</div>
+      </div>`;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+  }
+
+  function adicionarTyping() {
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = "msg ai";
+    div.id = "typing-" + Date.now();
+    div.innerHTML = `
+      <div class="msg-avatar">🛰️</div>
+      <div>
+        <div class="msg-bubble">
+          <div class="typing-indicator">
+            <div class="dot-typing"></div>
+            <div class="dot-typing"></div>
+            <div class="dot-typing"></div>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div.id;
+  }
+
+  function removerTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+</script>
+</body>
+</html>
